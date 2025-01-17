@@ -14,7 +14,7 @@ def time_str_format(time_str):
     return time_float
 
 
-def parse_file(file: str):
+def parse_file(file: str, threshold: float = 0.0):
     with open(file) as f:
         lines = [line.strip() for line in f]
     
@@ -39,6 +39,10 @@ def parse_file(file: str):
                 keyword = None
             else:
                 score = float(seqs[-1])
+                # 忽略掉小于阈值的关键词
+                if score < threshold:
+                    continue
+                
                 end_time = round(time_str_format(seqs[-2]), 2)
                 start_time = round(time_str_format(seqs[-3]), 2)
                 keyword = seqs[:-3]
@@ -104,11 +108,11 @@ class SkwEvaluator():
         else:
             raise AttributeError(f"not support {method_name}")
           
-    def parse_result_file(self, file: str):
+    def parse_result_file(self, file: str, threshold: float = 0.0):
         """
         Parsing result file.
         """
-        file2ref, self.result_keyword_num, self.result_per_keyword_num = parse_file(file)
+        file2ref, self.result_keyword_num, self.result_per_keyword_num = parse_file(file, threshold)
         return file2ref
 
     def parse_ref_file(self, file: str):
@@ -270,8 +274,11 @@ def parse_args():
                         help="search result file")
     parser.add_argument("-r", "--reference", type=str, required=True,
                         help="reference file")
-    parser.add_argument("-t", "--threshold", type=float, default=1,
+    parser.add_argument("-tt", "--time_threshold", type=float, default=1,
                         help="keyword match threshold")
+    parser.add_argument("-st", "--score_threshold", type=float, default=0,
+                        help="keyword score threshold, if less score_threadhold, \
+                              the keyword is not considered to be a hit.")
     parser.add_argument("-f", "--isWriteResultToFile", action="store_true",
                         help="write result to file.")
     parser.add_argument("-m", "--metric_method", type=str, default="difference",
@@ -287,13 +294,13 @@ def parse_args():
 def main(args):
     evaluator = SkwEvaluator()
     evaluator.set_keyword_match_method(args.metric_method)
-    result_file2ref = evaluator.parse_result_file(args.search_result)
+    result_file2ref = evaluator.parse_result_file(args.search_result, args.score_threshold)
     reference_file2ref = evaluator.parse_ref_file(args.reference)
     
     print(f"检索结果中关键词数量: {evaluator.result_keyword_num}")
     print(f"参考答案中关键词数量: {evaluator.reference_keyword_num}")
     
-    evaluator.cal(result_file2ref, reference_file2ref, args.threshold)
+    evaluator.cal(result_file2ref, reference_file2ref, args.time_threshold)
     
     print(f"命中正确的关键词数量: {evaluator.recall_true}")
     print(f"命中错误的关键词数量: {evaluator.recall_false}")
@@ -310,7 +317,12 @@ def main(args):
 if __name__ == "__main__":
     """
     Usage:
-        python skw_evaluate.py -search_result search_Result.txt -reference kws_ref.txt -isWriteResultToFile
+        python skw_evaluate.py -s search_Result.txt 
+                               -r kws_ref.txt 
+                               -f
+                               -tt 1.0
+                               -st 0.0
+                               -m range
     """
     args = parse_args()
     main(args)
