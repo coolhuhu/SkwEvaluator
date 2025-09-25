@@ -150,9 +150,9 @@ class SkwEvaluator():
                     # result_items = [[1.2, 1.75], [1.9, 2.65]]
                     # reference_items = [[1.35, 1.95], [2.15, 3.0]]
                     break
-        if not flag:
-            self.recall_false += 1
-            self.recall_false_keywords.append([filename, keyword, *ref_item, *res_item])
+            if not flag:
+                self.recall_false += 1
+                self.recall_false_keywords.append([filename, keyword, *ref_item, *res_item])
     
     def cal(self, result: Dict, reference: Dict, threshold=2):
         for file, result_keywords in result.items():
